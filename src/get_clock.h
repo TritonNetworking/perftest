@@ -38,8 +38,15 @@
 #define GET_CLOCK_H
 
 #if defined (__x86_64__) || defined(__i386__)
+#include <time.h>
 /* Note: only x86 CPUs which have rdtsc instruction are supported. */
 typedef unsigned long long cycles_t;
+static inline cycles_t get_cycles() {
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  return (((cycles_t) ts.tv_sec) * 1000000000) + ts.tv_nsec;
+}
+/*
 static inline cycles_t get_cycles()
 {
 	unsigned low, high;
@@ -49,6 +56,7 @@ static inline cycles_t get_cycles()
 	val = (val << 32) | low;
 	return val;
 }
+*/
 #elif defined(__PPC__) || defined(__PPC64__)
 /* Note: only PPC CPUs which have mftb instruction are supported. */
 /* PPC64 has mftb */
