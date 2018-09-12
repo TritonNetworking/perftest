@@ -1128,6 +1128,7 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 
 	/* ODP */
 	#ifdef HAVE_ODP
+	fprintf(stderr, "HAVE_ODP\n");
 	if (user_param->use_odp) {
 		if ( !check_odp_support(ctx) )
 			return 1;
@@ -1149,6 +1150,7 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 	#endif
 
 	if (user_param->mmap_file != NULL) {
+		fprintf(stderr, "create_single_mr: in mmap ...\n");
 		ctx->is_contig_supported = FAILURE;
 		if (pp_init_mmap(ctx, ctx->buff_size, user_param->mmap_file,
 				 user_param->mmap_offset))
@@ -1160,6 +1162,8 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 	} else {
 		/* Allocating buffer for data, in case driver not support contig pages. */
 		if (ctx->is_contig_supported == FAILURE) {
+			fprintf(stderr, "create_single_mr: calling memalign ...\n");
+			fprintf(stderr, "create_single_mr: cycle_buffer / alignment = %d, size = %zu.\n", user_param->cycle_buffer, ctx->buff_size);
 			ctx->buf[qp_index] = memalign(user_param->cycle_buffer, ctx->buff_size);
 			if (!ctx->buf[qp_index]) {
 				fprintf(stderr, "Couldn't allocate work buf.\n");
@@ -1168,6 +1172,7 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 
 			memset(ctx->buf[qp_index], 0, ctx->buff_size);
 		} else {
+			fprintf(stderr, "create_single_mr: setting buf to null ...\n");
 			ctx->buf[qp_index] = NULL;
 			#ifdef HAVE_VERBS_EXP
 			exp_flags |= IBV_EXP_ACCESS_ALLOCATE_MR;
@@ -1201,6 +1206,7 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 
 	/* Allocating Memory region and assigning our buffer to it. */
 	#ifdef HAVE_VERBS_EXP
+	fprintf(stderr, "use_odp: %d.\n", user_param->use_odp);
 	if (ctx->is_contig_supported == SUCCESS || user_param->use_odp) {
 		reg_mr_exp_in.pd = ctx->pd;
 		reg_mr_exp_in.addr = ctx->buf[qp_index];
@@ -1209,10 +1215,14 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 		reg_mr_exp_in.comp_mask = 0;
 
 		ctx->mr[qp_index] = ibv_exp_reg_mr(&reg_mr_exp_in);
+		fprintf(stderr, "create_single_mr: HAVE_VERBS_EXP if, buf = %p, size = %zu.\n", ctx->buf[qp_index], ctx->buff_size);
 	}
-	else
+	else {
 		ctx->mr[qp_index] = ibv_reg_mr(ctx->pd, ctx->buf[qp_index], ctx->buff_size, flags);
+		fprintf(stderr, "create_single_mr: HAVE_VERBS_EXP else, buf = %p, size = %zu.\n", ctx->buf[qp_index], ctx->buff_size);
+	}
 	#else
+	fprintf(stderr, "create_single_mr: reg_mr, buf = %p, size = %zu.\n", ctx->buf[qp_index], ctx->buff_size);
 	ctx->mr[qp_index] = ibv_reg_mr(ctx->pd, ctx->buf[qp_index], ctx->buff_size, flags);
 	#endif
 
@@ -1221,8 +1231,10 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 		return 1;
 	}
 
-	if (ctx->is_contig_supported == SUCCESS)
+	if (ctx->is_contig_supported == SUCCESS) {
 		ctx->buf[qp_index] = ctx->mr[qp_index]->addr;
+		fprintf(stderr, "create_single_mr: is_contig_supported, buf = %p, size = %zu.\n", ctx->buf[qp_index], ctx->buff_size);
+	}
 
 	return 0;
 }
@@ -1235,6 +1247,7 @@ int create_mr(struct pingpong_context *ctx, struct perftest_parameters *user_par
 	int i;
 
 	/* create first MR */
+	fprintf(stderr, "Creating first mr...\n");
 	if (create_single_mr(ctx, user_param, 0)) {
 		fprintf(stderr, "failed to create mr\n");
 		return 1;
@@ -1243,6 +1256,7 @@ int create_mr(struct pingpong_context *ctx, struct perftest_parameters *user_par
 	/* create the rest if needed, or copy the first one */
 	for (i = 1; i < user_param->num_of_qps; i++) {
 		if (user_param->mr_per_qp) {
+			fprintf(stderr, "Creating extra mr per qp...\n");
 			if (create_single_mr(ctx, user_param, i)) {
 				fprintf(stderr, "failed to create mr\n");
 				return 1;
@@ -1278,6 +1292,7 @@ int ctx_init(struct pingpong_context *ctx, struct perftest_parameters *user_para
 	#endif
 
 	ctx->is_contig_supported  = check_for_contig_pages_support(ctx->context);
+	ctx->is_contig_supported = FAILURE;
 
 	/* Allocating an event channel if requested. */
 	if (user_param->use_event) {
@@ -2881,8 +2896,10 @@ int run_iter_bw(struct pingpong_context *ctx,struct perftest_parameters *user_pa
 					#endif
 				}
 
-				if (user_param->noPeak == OFF)
+				if (user_param->noPeak == OFF) {
 					user_param->tposted[totscnt] = get_cycles();
+					fprintf(stderr, "posted work item %lu at %llu.\n", totscnt, user_param->tposted[totscnt]);
+				}
 
 				if (user_param->test_type == DURATION && user_param->state == END_STATE)
 					break;
@@ -2910,6 +2927,8 @@ int run_iter_bw(struct pingpong_context *ctx,struct perftest_parameters *user_pa
 				}
 				#endif
 				#else
+				// my_read_!2r15345
+				fprintf(stderr, "posting work item %lu ...\n", totscnt);
 				err = ibv_post_send(ctx->qp[index],&ctx->wr[index*user_param->post_list],&bad_wr);
 				#endif
 				if (err) {
@@ -2925,6 +2944,7 @@ int run_iter_bw(struct pingpong_context *ctx,struct perftest_parameters *user_pa
 								ctx->scnt[index],ctx->my_addr[index],0,ctx->cache_line_size,ctx->cycle_buffer);
 					else
 					#endif
+						fprintf(stderr, "Increasing my addr.\n");
 						increase_loc_addr(ctx->wr[index].sg_list,user_param->size,ctx->scnt[index],
 								ctx->my_addr[index],0,ctx->cache_line_size,ctx->cycle_buffer);
 
@@ -2936,6 +2956,7 @@ int run_iter_bw(struct pingpong_context *ctx,struct perftest_parameters *user_pa
 									ctx->cycle_buffer);
 						else
 						#endif
+							fprintf(stderr, "Increasing remote addr.\n");
 							increase_rem_addr(&ctx->wr[index],user_param->size,
 									ctx->scnt[index],ctx->rem_addr[index],user_param->verb,ctx->cache_line_size,
 									ctx->cycle_buffer);
@@ -2960,6 +2981,7 @@ int run_iter_bw(struct pingpong_context *ctx,struct perftest_parameters *user_pa
 						else
 					#endif
 							ctx->wr[index].send_flags |= IBV_SEND_SIGNALED;
+							fprintf(stderr, "registered signal for work item %d.\n", totscnt);
 					#ifdef HAVE_ACCL_VERBS
 					}
 					#endif
@@ -2991,6 +3013,7 @@ int run_iter_bw(struct pingpong_context *ctx,struct perftest_parameters *user_pa
 			#endif
 				ne = ibv_poll_cq(ctx->send_cq,CTX_POLL_BATCH,wc);
 
+			fprintf(stderr, "Pulled CQ.\n");
 			if (ne > 0) {
 				for (i = 0; i < ne; i++) {
 					wc_id = (user_param->verb_type == ACCL_INTF) ?
@@ -3009,10 +3032,13 @@ int run_iter_bw(struct pingpong_context *ctx,struct perftest_parameters *user_pa
 
 					if (user_param->noPeak == OFF) {
 
-						if (totccnt >=  tot_iters - 1)
+						if (totccnt >=  tot_iters - 1) {
 							user_param->tcompleted[user_param->iters*num_of_qps - 1] = get_cycles();
-						else
+							fprintf(stderr, "1 completed work item %lu at %llu.\n", user_param->iters*num_of_qps - 1, user_param->tcompleted[user_param->iters*num_of_qps - 1]);
+						} else {
 							user_param->tcompleted[totccnt-1] = get_cycles();
+							fprintf(stderr, "2 completed work item %lu at %llu.\n", totscnt, user_param->tcompleted[totscnt - 1]);
+						}
 					}
 
 					if (user_param->test_type==DURATION && user_param->state == SAMPLE_STATE) {
@@ -4218,8 +4244,6 @@ int run_iter_lat_send(struct pingpong_context *ctx,struct perftest_parameters *u
 				do {
 					s_ne = ibv_poll_cq(ctx->send_cq, 1, &s_wc);
 				} while (!user_param->use_event && s_ne == 0);
-
-
 
 				if (s_ne < 0) {
 					fprintf(stderr, "poll on Send CQ failed %d\n", s_ne);

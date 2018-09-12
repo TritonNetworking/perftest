@@ -154,6 +154,7 @@ int main(int argc, char *argv[])
 
 	} else {
 		/* create all the basic IB resources. */
+		fprintf(stderr, "Calling ctx_init ...\n");
 		if (ctx_init(&ctx,&user_param)) {
 			fprintf(stderr, " Couldn't create IB resources\n");
 			return FAILURE;
@@ -296,6 +297,7 @@ int main(int argc, char *argv[])
 		}
 
 	} else if (user_param.test_method == RUN_REGULAR) {
+		fprintf(stderr, "Running regular test ...\n");
 
 		ctx_set_send_wqes(&ctx,&user_param,rem_dest);
 

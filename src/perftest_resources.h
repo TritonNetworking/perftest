@@ -704,6 +704,7 @@ static __inline void increase_loc_addr(struct ibv_sge *sg,int size,uint64_t rcnt
 	if ( ((rcnt+1) % (cycle_buffer/ INC(size,cache_line_size))) == 0 )
 		sg->addr = prim_addr;
 
+	fprintf(stderr, "increase_loc_addr: sg->addr = %lu.\n", sg->addr);
 }
 
 /* catch_alarm.
