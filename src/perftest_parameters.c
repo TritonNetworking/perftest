@@ -2291,7 +2291,7 @@ void print_report_lat (struct perftest_parameters *user_param)
 	ALLOCATE(delta,cycles_t,user_param->iters - 1);
 
 	for (i = 0; i < user_param->iters - 1; ++i)
-		delta[i] = user_param->tposted[i + 1] - user_param->tposted[i];
+		delta[i] = user_param->tcompleted[i] - user_param->tposted[i];
 
 	if (user_param->r_flag->cycles) {
 		cycles_to_units = 1;

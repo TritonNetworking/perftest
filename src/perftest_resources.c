@@ -642,8 +642,11 @@ void alloc_ctx(struct pingpong_context *ctx,struct perftest_parameters *user_par
 	ALLOCATE(user_param->tposted, cycles_t, tarr_size);
 	memset(user_param->tposted, 0, sizeof(cycles_t)*tarr_size);
 
-	if (user_param->tst == LAT && user_param->test_type == DURATION)
+	if (user_param->tst == LAT && user_param->test_type == DURATION) {
 		ALLOCATE(user_param->tcompleted, cycles_t, 1);
+    } else {
+        ALLOCATE(user_param->tcompleted, cycles_t, tarr_size);
+    }
 
 	ALLOCATE(ctx->qp, struct ibv_qp*, user_param->num_of_qps);
 	ALLOCATE(ctx->mr, struct ibv_mr*, user_param->num_of_qps);
@@ -4219,7 +4222,7 @@ int run_iter_lat_send(struct pingpong_context *ctx,struct perftest_parameters *u
 					s_ne = ibv_poll_cq(ctx->send_cq, 1, &s_wc);
 				} while (!user_param->use_event && s_ne == 0);
 
-
+                user_param->tcompleted[scnt - 1] = get_cycles();
 
 				if (s_ne < 0) {
 					fprintf(stderr, "poll on Send CQ failed %d\n", s_ne);
