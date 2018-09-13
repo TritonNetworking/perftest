@@ -454,6 +454,8 @@ int main(int argc, char *argv[])
 		printf(RESULT_LINE);
 	}
 
+	fflush(stdout);
+
 	if (ctx_close_connection(&user_comm,my_dest,rem_dest)) {
 		fprintf(stderr,"Failed to close connection between server and client\n");
 		fprintf(stderr," Trying to close this side resources\n");
