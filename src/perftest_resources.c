@@ -14,6 +14,8 @@
 #include "perftest_resources.h"
 #include "config.h"
 
+#define INSERT_SEQ_NO 1
+
 #ifdef HAVE_VERBS_EXP
 static enum ibv_exp_wr_opcode exp_opcode_verbs_array[] = {IBV_EXP_WR_SEND,IBV_EXP_WR_RDMA_WRITE,IBV_EXP_WR_RDMA_READ};
 static enum ibv_exp_wr_opcode exp_opcode_atomic_array[] = {IBV_EXP_WR_ATOMIC_CMP_AND_SWP,IBV_EXP_WR_ATOMIC_FETCH_AND_ADD};
@@ -1224,8 +1226,11 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 		return 1;
 	}
 
-	if (ctx->is_contig_supported == SUCCESS)
+	if (ctx->is_contig_supported == SUCCESS) {
 		ctx->buf[qp_index] = ctx->mr[qp_index]->addr;
+        printf("ctx->buf[qp_index] = %p.\n", ctx->buf[qp_index]);
+        memset(ctx->buf[qp_index], 0xA3, ctx->buff_size);
+    }
 
 	return 0;
 }
@@ -4192,6 +4197,10 @@ int run_iter_lat_send(struct pingpong_context *ctx,struct perftest_parameters *u
 				break;
 
 			/* send the packet that's in index 0 on the buffer */
+#if INSERT_SEQ_NO
+            uint16_t counter = (uint16_t)(scnt - 1);
+            memcpy(ctx->buf[0], &counter, sizeof counter);
+#endif
 			#ifdef HAVE_VERBS_EXP
 			if (user_param->use_exp == 1)
 				err = (ctx->exp_post_send_func_pointer)(ctx->qp[0],&ctx->exp_wr[0],&bad_exp_wr);
