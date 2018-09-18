@@ -14,7 +14,7 @@
 #include "perftest_resources.h"
 #include "config.h"
 
-#define INSERT_SEQ_NO 1
+#define INSERT_SEQ_NO 0
 
 #ifdef HAVE_VERBS_EXP
 static enum ibv_exp_wr_opcode exp_opcode_verbs_array[] = {IBV_EXP_WR_SEND,IBV_EXP_WR_RDMA_WRITE,IBV_EXP_WR_RDMA_READ};
@@ -1230,6 +1230,7 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 		ctx->buf[qp_index] = ctx->mr[qp_index]->addr;
         printf("ctx->buf[qp_index] = %p.\n", ctx->buf[qp_index]);
         memset(ctx->buf[qp_index], 0xA3, ctx->buff_size);
+        strncpy(ctx->buf[qp_index], "synd", 4);
     }
 
 	return 0;
