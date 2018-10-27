@@ -1228,9 +1228,14 @@ int create_single_mr(struct pingpong_context *ctx, struct perftest_parameters *u
 
 	if (ctx->is_contig_supported == SUCCESS) {
 		ctx->buf[qp_index] = ctx->mr[qp_index]->addr;
-        printf("ctx->buf[qp_index] = %p.\n", ctx->buf[qp_index]);
-        memset(ctx->buf[qp_index], 0xA3, ctx->buff_size);
-        strncpy(ctx->buf[qp_index], "synd", 4);
+        if (ctx->buff_size >= 12) {
+            memset(ctx->buf[qp_index], 0xA3, ctx->buff_size);
+            char *addr = (char *)ctx->buf[qp_index];
+            strncpy(addr, "synd", 4);
+            uint32_t ts1 = 32768, ts2 = 65536;
+            memcpy(addr + 4, &ts1, sizeof(ts1));
+            memcpy(addr + 8, &ts2, sizeof(ts2));
+        }
     }
 
 	return 0;
@@ -4144,7 +4149,7 @@ int run_iter_lat_send(struct pingpong_context *ctx,struct perftest_parameters *u
 					 * is enough space in the rx_depth,
 					 * post that you received a packet.
 					 */
-					if (user_param->test_type==DURATION || (rcnt + size_per_qp  <= user_param->iters)) {
+					if (1) {
 
 						if (user_param->use_srq) {
 
@@ -4159,6 +4164,16 @@ int run_iter_lat_send(struct pingpong_context *ctx,struct perftest_parameters *u
 								fprintf(stderr, "Couldn't post recv: rcnt=%lu\n",rcnt);
 								return 15;
 							}
+
+                            struct ibv_recv_wr *rwr = &ctx->rwr[wc.wr_id];
+                            struct ibv_sge *sge = rwr->sg_list;
+                            //printf("sg_list len = %d.\n", rwr->num_sge);
+                            //printf("Received %zu bytes.\n", sge->length);
+                            char magic[5];
+                            char *addr = (char *)sge->addr;
+                            strncpy(magic, addr, 4);
+                            magic[4] = 0;
+                            printf("Payload: %s, %zu, %zu.\n", magic, *((uint32_t *)addr + 1), *((uint32_t *)addr + 2));
 						}
 					}
 				} else if (ne < 0) {
