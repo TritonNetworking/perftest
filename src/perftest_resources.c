@@ -236,6 +236,18 @@ static void get_cpu_stats(struct perftest_parameters *duration_param,int stat_in
 	fclose(fp);
 }
 
+static int check_for_cross_channel(struct ibv_context *context)
+{
+	struct ibv_exp_device_attr attr;
+	memset(&attr,0,sizeof attr);
+    if (ibv_exp_query_device(context, &attr)) {
+		fprintf(stderr, "Couldn't get device attributes\n");
+		return FAILURE;
+    }
+
+    return (attr.exp_device_cap_flags &= IBV_EXP_DEVICE_CROSS_CHANNEL) ? SUCCESS : FAILURE;
+}
+
 static int check_for_contig_pages_support(struct ibv_context *context)
 {
 	int answer;
@@ -1278,6 +1290,7 @@ int ctx_init(struct pingpong_context *ctx, struct perftest_parameters *user_para
 	#endif
 
 	ctx->is_contig_supported  = check_for_contig_pages_support(ctx->context);
+    ctx->is_cross_channel_supported = check_for_cross_channel(ctx->context);
 
 	/* Allocating an event channel if requested. */
 	if (user_param->use_event) {

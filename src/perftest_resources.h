@@ -149,6 +149,7 @@ struct pingpong_context {
 	uint64_t				*scnt;
 	uint64_t				*ccnt;
 	int					is_contig_supported;
+    int                 is_cross_channel_supported;
 	uint32_t                                *ctrl_buf;
 	uint32_t                                *credit_buf;
 	struct ibv_mr                           *credit_mr;
